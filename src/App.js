@@ -41,7 +41,7 @@ const AudioPlayer = () => {
       try {
         // Define your audio file URLs here
         // Replace with your GitHub Pages URL or Vercel public folder
-        const baseUrl = 'https://flymetothemoon-afk.github.io/audio-files/songs/';
+        const baseUrl = 'https://flymetothemoon-afk.github.io/audio-files/Songs/';
         
         // List your audio files here - you'll need to manually list them
         // Or use a manifest.json file (see below for that option)
