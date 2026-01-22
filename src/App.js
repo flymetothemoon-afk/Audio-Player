@@ -2,30 +2,103 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, SkipForward, SkipBack, ChevronUp, ChevronDown, Volume2 } from 'lucide-react';
 
 const AudioPlayer = () => {
-  // Sample playlist - replace with your actual audio files
-  const playlist = [
-    { id: 1, title: "Summer Breeze", artist: "Artist Name", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-    { id: 2, title: "Night Drive", artist: "Another Artist", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-    { id: 3, title: "Morning Coffee", artist: "Third Artist", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-    { id: 4, title: "Sunset Boulevard", artist: "Fourth Artist", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" }
-  ];
-
+  const [playlist, setPlaylist] = useState([]);
   const [currentTrack, setCurrentTrack] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const audioRef = useRef(null);
 
+  // Parse filename to extract title and artist
+  const parseFilename = (filename) => {
+    // Remove .mp3 extension
+    const nameWithoutExt = filename.replace(/\.mp3$/i, '');
+    
+    // Split by " - " to separate title and artist
+    const parts = nameWithoutExt.split(' - ');
+    
+    if (parts.length >= 2) {
+      return {
+        title: parts[0].trim(),
+        artist: parts[1].trim()
+      };
+    } else {
+      // If no separator found, use filename as title
+      return {
+        title: nameWithoutExt.trim(),
+        artist: 'Unknown Artist'
+      };
+    }
+  };
+
+  // Load audio files from the songs directory
+  useEffect(() => {
+    const loadPlaylist = async () => {
+      try {
+        // Define your audio file URLs here
+        // Replace with your GitHub Pages URL or Vercel public folder
+        const baseUrl = 'https://flymetothemoon-afk.github.io/audio-files/songs/';
+        
+        // List your audio files here - you'll need to manually list them
+        // Or use a manifest.json file (see below for that option)
+        const audioFiles = [
+          'Young Hearts Run Free (Candi Staton Cover) - The Jets.mp3',
+          // Add more files here...
+        ];
+
+        const loadedPlaylist = audioFiles.map((filename, index) => {
+          const { title, artist } = parseFilename(filename);
+          return {
+            id: index + 1,
+            title,
+            artist,
+            url: baseUrl + encodeURIComponent(filename),
+            filename
+          };
+        });
+
+        setPlaylist(loadedPlaylist);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading playlist:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadPlaylist();
+  }, []);
+
+  const skipToNext = () => {
+    setCurrentTrack((prev) => (prev + 1) % playlist.length);
+    setIsPlaying(true);
+    setTimeout(() => audioRef.current?.play(), 100);
+  };
+
+  const skipToPrev = () => {
+    if (currentTime > 3) {
+      audioRef.current.currentTime = 0;
+    } else {
+      setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length);
+      setIsPlaying(true);
+      setTimeout(() => audioRef.current?.play(), 100);
+    }
+  };
+
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || playlist.length === 0) return;
 
     const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => skipToNext();
+    const handleEnded = () => {
+      setCurrentTrack((prev) => (prev + 1) % playlist.length);
+      setIsPlaying(true);
+      setTimeout(() => audioRef.current?.play(), 100);
+    };
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
@@ -36,7 +109,7 @@ const AudioPlayer = () => {
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentTrack]);
+  }, [currentTrack, playlist]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -92,11 +165,31 @@ const AudioPlayer = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+        <div className="flex items-center justify-center px-4 py-3">
+          <div className="text-center">Loading playlist...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (playlist.length === 0) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+        <div className="flex items-center justify-center px-4 py-3">
+          <div className="text-center">No audio files found</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
       <audio
         ref={audioRef}
-        src={playlist[currentTrack].url}
+        src={playlist[currentTrack]?.url}
         preload="metadata"
       />
 
@@ -112,8 +205,8 @@ const AudioPlayer = () => {
                 {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
               </button>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold truncate">{playlist[currentTrack].title}</div>
-                <div className="text-sm text-indigo-100 truncate">{playlist[currentTrack].artist}</div>
+                <div className="font-semibold truncate">{playlist[currentTrack]?.title}</div>
+                <div className="text-sm text-indigo-100 truncate">{playlist[currentTrack]?.artist}</div>
               </div>
             </div>
             <button
@@ -142,8 +235,8 @@ const AudioPlayer = () => {
 
             {/* Current Track Info */}
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold mb-2">{playlist[currentTrack].title}</h2>
-              <p className="text-xl text-indigo-100">{playlist[currentTrack].artist}</p>
+              <h2 className="text-3xl font-bold mb-2">{playlist[currentTrack]?.title}</h2>
+              <p className="text-xl text-indigo-100">{playlist[currentTrack]?.artist}</p>
             </div>
 
             {/* Progress Bar */}
@@ -206,7 +299,7 @@ const AudioPlayer = () => {
 
             {/* Playlist */}
             <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
-              <h3 className="font-semibold mb-3 text-lg">Playlist</h3>
+              <h3 className="font-semibold mb-3 text-lg">Playlist ({playlist.length} songs)</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {playlist.map((track, index) => (
                   <button
