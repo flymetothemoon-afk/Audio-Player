@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, SkipForward, SkipBack, ChevronUp, ChevronDown, Volume2 } from 'lucide-react';
 
 const AudioPlayer = () => {
@@ -72,13 +72,13 @@ const AudioPlayer = () => {
     loadPlaylist();
   }, []);
 
-  const skipToNext = () => {
+  const skipToNext = useCallback(() => {
     setCurrentTrack((prev) => (prev + 1) % playlist.length);
     setIsPlaying(true);
     setTimeout(() => audioRef.current?.play(), 100);
-  };
+  }, [playlist.length]);
 
-  const skipToPrev = () => {
+  const skipToPrev = useCallback(() => {
     if (currentTime > 3) {
       audioRef.current.currentTime = 0;
     } else {
@@ -86,7 +86,7 @@ const AudioPlayer = () => {
       setIsPlaying(true);
       setTimeout(() => audioRef.current?.play(), 100);
     }
-  };
+  }, [currentTime, playlist.length]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -94,11 +94,7 @@ const AudioPlayer = () => {
 
     const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => {
-      setCurrentTrack((prev) => (prev + 1) % playlist.length);
-      setIsPlaying(true);
-      setTimeout(() => audioRef.current?.play(), 100);
-    };
+    const handleEnded = () => skipToNext();
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
@@ -109,7 +105,7 @@ const AudioPlayer = () => {
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentTrack, playlist]);
+  }, [currentTrack, playlist, skipToNext]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -124,22 +120,6 @@ const AudioPlayer = () => {
       audioRef.current.play();
     }
     setIsPlaying(!isPlaying);
-  };
-
-  const skipToNext = () => {
-    setCurrentTrack((prev) => (prev + 1) % playlist.length);
-    setIsPlaying(true);
-    setTimeout(() => audioRef.current?.play(), 100);
-  };
-
-  const skipToPrev = () => {
-    if (currentTime > 3) {
-      audioRef.current.currentTime = 0;
-    } else {
-      setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length);
-      setIsPlaying(true);
-      setTimeout(() => audioRef.current?.play(), 100);
-    }
   };
 
   const handleSeek = (e) => {
